@@ -9,9 +9,9 @@ defmodule ApplicationRouter do
     conn.assign :layout, "main"
   end
 
-  # It is common to break your Dynamo into many
-  # routers, forwarding the requests between them:
-  # forward "/posts", to: PostsRouter
+  get "/" do
+    conn |> redirect to: "/room"
+  end
 
   get "/:room" do
     conn = conn.assign(:room, conn.params[:room])
