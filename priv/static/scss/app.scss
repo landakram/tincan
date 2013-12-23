@@ -1,0 +1,12 @@
+@import "settings";
+@import "foundation";
+
+.message {
+    font-size: 1.1em;
+    .date {
+        color: gray;
+    }
+    .message-text {
+        font-weight: bold;
+    }
+}

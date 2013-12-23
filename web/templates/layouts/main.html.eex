@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= content_for :title || "Chat" %></title>
+    <link rel="stylesheet" href="/static/css/app.css" />
+    <script src="/static/bower_components/modernizr/modernizr.js"></script>
+</head>
+<body>
+    <%= content_for :template %>
+<script src="/static/bower_components/foundation/js/foundation.min.js"></script>
+<script>
+    $(document).foundation();
+</script> 
+</body>
+</html>

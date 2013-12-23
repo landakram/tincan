@@ -1,0 +1,29 @@
+<% content_for :title do %>
+<%= @room %>
+<% end %>
+<div class="row">
+    <div class="small-8 small-centered columns">
+        <h1><%= @room %></h1>
+        <form id="send-form" action="#" method="POST">
+            <div class="row collapse">
+                <div class="medium-10 columns">
+                    <input id="message-input" type="text" name="message" placeholder="type a message" />
+                </div>
+                <div class="medium-2 columns">
+                    <input class="postfix success button" type="submit" value="Send" />
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="row">
+    <div class="small-8 small-centered columns">
+        <div id="messages">
+            <ul id="message-list" class="no-bullet"></ul>
+        </div>
+    </div>
+</div>
+
+<script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.min.js"></script>
+<script src="/static/js/room.js"></script> 
