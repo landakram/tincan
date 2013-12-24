@@ -2,9 +2,6 @@ defmodule ApplicationRouter do
   use Dynamo.Router
 
   prepare do
-    # Pick which parts of the request you want to fetch
-    # You can comment the line below if you don't need
-    # any of them or move them to a forwarded router
     conn = conn.fetch([:cookies, :params, :body])
     conn.assign :layout, "main"
   end
@@ -30,9 +27,14 @@ defmodule ApplicationRouter do
       pid <- message
     end
 
+    spawn fn -> 
+      keep_alive pid, conn
+    end
+
     client |> Exredis.Api.publish room, "Someone has joined the room."
     client |> Exredis.stop
     subscribe_loop conn, pid, client_sub
+    conn
   end
 
   post "/:room/send" do
@@ -44,15 +46,32 @@ defmodule ApplicationRouter do
     conn.resp 200, "Success"
   end
 
+  @doc "Works around Heroku's 55 second request timeout by pinging the client."
+  defp keep_alive(pid, conn) do
+    await conn, 50000, &on_wake_up(&1, &2), &on_time_out(&1)
+    case conn.chunk "ka\n\n" do
+      {:ok, conn} ->
+        keep_alive pid, conn
+      {:error, _reason} -> 
+        pid <- {:exit, self}
+    end
+  end
+  defp on_wake_up(_arg1, _arg2) do
+  end
+  defp on_time_out(_arg1) do
+  end
+
   defp subscribe_loop(conn, pid, client_sub) do
     receive do 
       {:message, _key, message, _sender} ->
         case conn.chunk "data: #{message}\n\n" do
           {:ok, conn} ->
             subscribe_loop conn, pid, client_sub
-          {:error, :closed} ->
+          {:error, _reason} ->
             client_sub |> Exredis.stop
         end
+      {:exit, _sender} ->
+        client_sub |> Exredis.stop
     end
   end
 
