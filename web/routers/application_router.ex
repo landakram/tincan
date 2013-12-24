@@ -22,8 +22,8 @@ defmodule ApplicationRouter do
     conn = conn.resp_content_type "text/event-stream"
     conn = conn.send_chunked 200
     room = conn.params[:room]
-    client = Exredis.start
-    client_sub = Exredis.Sub.start
+    client = redis_start
+    client_sub = redis_sub_start
 
     pid = self
     client_sub |> Exredis.Sub.subscribe room, fn message ->
@@ -36,7 +36,7 @@ defmodule ApplicationRouter do
   end
 
   post "/:room/send" do
-    client = Exredis.start
+    client = redis_start
     message = conn.params[:message]
     room = conn.params[:room]
     client |> Exredis.Api.publish room, message
@@ -54,5 +54,19 @@ defmodule ApplicationRouter do
             client_sub |> Exredis.stop
         end
     end
+  end
+
+  defp redis_start do
+    host = System.get_env("REDIS_HOST") |> String.to_char_list!
+    port = System.get_env("REDIS_PORT") |> String.to_char_list! |> :string.to_integer |> elem 0
+    password = System.get_env("REDIS_PASSWORD") |> String.to_char_list!
+    Exredis.start host, port, 0, password
+  end
+
+  defp redis_sub_start do
+    host = System.get_env("REDIS_HOST") |> String.to_char_list!
+    port = System.get_env("REDIS_PORT") |> String.to_char_list! |> :string.to_integer |> elem 0
+    password = System.get_env("REDIS_PASSWORD") |> String.to_char_list!
+    Exredis.Sub.start host, port, password
   end
 end
