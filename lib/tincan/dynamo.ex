@@ -1,6 +1,11 @@
 defmodule Tincan.Dynamo do
   use Dynamo
 
+  initializer :dynamo do
+    {:ok, pid} = :gen_server.start_link(Tincan.Registry, HashDict.new, [])
+    Process.register(pid, :chatrooms)
+  end
+
   config :dynamo,
     # The environment this Dynamo runs on
     env: Mix.env,
