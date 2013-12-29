@@ -27,7 +27,7 @@ defmodule Tincan.Room do
   def handle_cast({:remove_member, member}, {name, members}) do
     new_members = members |> Set.delete(member)
     if Set.size(new_members) == 0 do
-      :chatrooms |> Tincan.RoomRegistry.delete_room(name)
+      :chatrooms |> Tincan.Registry.delete_room(name)
       {:stop, :normal, {name, members}}
     else
       {:noreply, {name, new_members}}
