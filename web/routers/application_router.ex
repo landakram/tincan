@@ -1,9 +1,8 @@
 defmodule ApplicationRouter do
   use Dynamo.Router
 
-  @redis_host System.get_env("REDIS_HOST") |> String.to_char_list!
-  @redis_port System.get_env("REDIS_PORT") |> binary_to_integer
-  @redis_password System.get_env("REDIS_PASSWORD") |> String.to_char_list!
+  alias Tincan.Registry
+  alias Tincan.Room
 
   prepare do
     conn = conn.fetch([:cookies, :params, :body])
@@ -15,7 +14,12 @@ defmodule ApplicationRouter do
   end
 
   get "/:room" do
-    conn = conn.assign(:room, conn.params[:room])
+    room = conn.params[:room]
+    case :chatrooms |> Registry.get_room(room) do
+      nil -> :chatrooms |> Registry.create_room(room)
+      _ -> 
+    end
+    conn = conn.assign(:room, room)
     render conn, "room.html"
   end
 
@@ -23,30 +27,36 @@ defmodule ApplicationRouter do
     conn = conn.resp_content_type "text/event-stream"
     conn = conn.send_chunked 200
     room = conn.params[:room]
-    client = Exredis.start @redis_host, @redis_port, 0, @redis_password
-    client_sub = Exredis.Sub.start @redis_host, @redis_port, @redis_password
+  
+    room_pid = :chatrooms |> Registry.get_room(room)
+    room_pid |> Room.add_member(self)
 
     pid = self
-    client_sub |> Exredis.Sub.subscribe room, fn message ->
-      pid <- message
-    end
-
     spawn fn -> 
       keep_alive pid, conn
     end
 
-    client |> Exredis.Api.publish room, "Someone has joined the room."
-    client |> Exredis.stop
-    subscribe_loop conn, pid, client_sub
+    subscribe_loop conn, pid, room_pid
     conn
+  end
+  defp subscribe_loop(conn, pid, room_pid) do
+    receive do 
+      {:message, message} ->
+        case conn.chunk "data: #{message}\n\n" do
+          {:ok, conn} ->
+            subscribe_loop conn, pid, room_pid
+          {:error, _reason} ->
+            room_pid |> Room.remove_member(pid)
+        end
+    end
   end
 
   post "/:room/send" do
-    client = Exredis.start @redis_host, @redis_port, 0, @redis_password
     message = conn.params[:message]
     room = conn.params[:room]
-    client |> Exredis.Api.publish room, message
-    client |> Exredis.stop
+    :chatrooms 
+    |> Registry.get_room(room)
+    |> Room.send_message([from: self, message: message])
     conn.resp 200, "Success"
   end
 
@@ -63,19 +73,5 @@ defmodule ApplicationRouter do
   defp on_wake_up(_arg1, _arg2) do
   end
   defp on_time_out(_arg1) do
-  end
-
-  defp subscribe_loop(conn, pid, client_sub) do
-    receive do 
-      {:message, _key, message, _sender} ->
-        case conn.chunk "data: #{message}\n\n" do
-          {:ok, conn} ->
-            subscribe_loop conn, pid, client_sub
-          {:error, _reason} ->
-            client_sub |> Exredis.stop
-        end
-      {:exit, _sender} ->
-        client_sub |> Exredis.stop
-    end
   end
 end

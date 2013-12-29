@@ -18,7 +18,6 @@ defmodule Tincan.Mixfile do
 
   defp deps do
     [ { :cowboy, github: "extend/cowboy" },
-      { :exredis, github: "artemeff/exredis" },
       { :dynamo, "~> 0.1.0-dev", github: "elixir-lang/dynamo" } ]
   end
 end
